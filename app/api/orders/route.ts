@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }> = [];
 
     for (const item of body.items) {
-      const product = products.find((p) => p.id === item.productId);
+      const product = products.find((p: (typeof products)[0]) => p.id === item.productId);
       if (!product) {
         return NextResponse.json(
           { error: `Product ${item.productId} not found` },
@@ -125,11 +125,11 @@ export async function GET(req: NextRequest) {
     });
 
     // Convert Decimal to number
-    const serializedOrders = orders.map((order) => ({
+    const serializedOrders = orders.map((order: (typeof orders)[0]) => ({
       ...order,
       subtotal: parseFloat(order.subtotal.toString()),
       total: parseFloat(order.total.toString()),
-      items: order.items.map((item) => ({
+      items: order.items.map((item: (typeof orders)[0]['items'][0]) => ({
         ...item,
         price: parseFloat(item.price.toString()),
         subtotal: parseFloat(item.subtotal.toString()),

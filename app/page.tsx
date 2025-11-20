@@ -15,7 +15,7 @@ async function getProducts() {
     });
     
     // Convert Decimal to number for client-side serialization
-    return products.map((product) => ({
+    return products.map((product: (typeof products)[0]) => ({
       ...product,
       price: parseFloat(product.price.toString()),
       createdAt: product.createdAt.toISOString(),

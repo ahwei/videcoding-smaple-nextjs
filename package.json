@@ -31,7 +31,9 @@
     "db:switch:sqlserver": "tsx scripts/db/switch-database.ts sqlserver",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "npm run db:test && npm run prisma:generate && npm run prisma:push && npm run db:seed",
-    "db:setup:local": "npm run db:start && npm run db:test && npm run prisma:generate && npm run prisma:push && npm run db:seed"
+    "db:setup:local": "npm run db:start && npm run db:test && npm run prisma:generate && npm run prisma:push && npm run db:seed",
+    "deploy:check": "tsx scripts/deployment-check.ts",
+    "deploy:verify": "npm run deploy:check && npm run build"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
