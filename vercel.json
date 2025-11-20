@@ -1,15 +1,8 @@
 {
-  "buildCommand": "prisma generate && next build",
+  "buildCommand": "npm run build",
   "devCommand": "next dev",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "env": [
-    {
-      "key": "DATABASE_URL",
-      "description": "PostgreSQL connection string",
-      "required": true
-    }
-  ],
   "functions": {
     "app/api/**/*.ts": {
       "memory": 1024,
