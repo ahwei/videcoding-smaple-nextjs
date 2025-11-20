@@ -16,7 +16,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("popular");
 
   return (
-    <div className="min-h-screen bg-[#fefefe] flex flex-col">
+    <div className="min-h-screen  bg-[#fefefe] flex flex-col">
       <div className="flex-1 flex flex-col gap-8 px-4 pt-8 pb-4 max-w-md mx-auto w-full">
         {/* Header */}
         <header className="flex items-center justify-between">
