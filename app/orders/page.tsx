@@ -1,25 +1,90 @@
 "use client";
 
-import { useCart } from "@/lib/cart-context";
 import { ChevronDown, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useCart } from "@/lib/cart-context";
+import { formatOrderStatus } from "@/lib/order-utils";
+
+interface OrderItem {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  subtotal: number;
+  image: string;
+}
+
+interface Order {
+  id: string;
+  orderNumber: string;
+  subtotal: number;
+  total: number;
+  status: string;
+  paymentMethod: string;
+  estimatedTime: number;
+  createdAt: string;
+  items: OrderItem[];
+}
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { orders, reorder } = useCart();
+  const { updateQuantity } = useCart();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
-  const handleReorder = (orderId: string) => {
-    reorder(orderId);
-    router.push("/cart");
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/orders");
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch orders");
+      }
+
+      const data = await response.json();
+      setOrders(data.orders);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError("無法載入訂單歷史");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReorder = async (order: Order) => {
+    try {
+      // 將訂單中的每個項目加回購物車
+      for (const item of order.items) {
+        updateQuantity(item.productId, item.quantity, {
+          name: item.productName,
+          description: "",
+          price: item.price,
+          image: item.image,
+        });
+      }
+      
+      // 導航到購物車頁面
+      router.push("/cart");
+    } catch (error) {
+      console.error("Error reordering:", error);
+      alert("重新訂購失敗，請稍後再試");
+    }
   };
 
   const toggleExpand = (orderId: string) => {
     setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
@@ -44,10 +109,24 @@ export default function OrdersPage() {
 
       {/* Orders List */}
       <main className="flex-1 px-4 pb-8 pt-12 max-w-md mx-auto w-full">
-        {orders.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <p className="text-base text-[#666666] text-center">載入中...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <p className="text-base text-red-500 text-center mb-4">{error}</p>
+            <button
+              onClick={fetchOrders}
+              className="text-[#ed9c2a] font-semibold"
+            >
+              重試
+            </button>
+          </div>
+        ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <p className="text-base text-[#666666] text-center">
-              No orders yet
+              尚無訂單
             </p>
           </div>
         ) : (
@@ -63,7 +142,7 @@ export default function OrdersPage() {
                     {formatDate(order.createdAt)}
                   </span>
                   <button
-                    onClick={() => handleReorder(order.id)}
+                    onClick={() => handleReorder(order)}
                     className="bg-[#ed9c2a] text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-[#d88a24] transition-colors"
                   >
                     Reorder
@@ -73,7 +152,7 @@ export default function OrdersPage() {
                 {/* Order Footer */}
                 <div className="flex items-center justify-between py-1">
                   <span className="text-sm text-[#666666] leading-5">
-                    ${order.totalPrice.toFixed(2)}
+                    ${order.total.toFixed(2)}
                   </span>
                   <button
                     onClick={() => toggleExpand(order.id)}
@@ -94,6 +173,9 @@ export default function OrdersPage() {
                       <span className="text-xs font-semibold text-[#666666]">
                         Order {order.orderNumber}
                       </span>
+                      <span className="text-xs font-semibold text-[#ed9c2a]">
+                        {formatOrderStatus(order.status)}
+                      </span>
                     </div>
                     {order.items.map((item) => (
                       <div
@@ -102,7 +184,7 @@ export default function OrdersPage() {
                       >
                         <div className="flex flex-col">
                           <span className="text-sm text-[#333333] font-medium">
-                            {item.name}
+                            {item.productName}
                           </span>
                           <span className="text-xs text-[#666666]">
                             x {item.quantity}

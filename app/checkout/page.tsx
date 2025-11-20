@@ -7,7 +7,7 @@ import { useState } from "react";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { clearCart, saveOrder } = useCart();
+  const { items: cartItems, clearCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState<"credit" | "apple">(
     "credit",
   );
@@ -15,16 +15,65 @@ export default function CheckoutPage() {
     "mastercard",
   );
   const [sameAsBilling, setSameAsBilling] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleContinue = () => {
-    // Generate a random order number
-    const orderNumber = `#${Math.floor(10000 + Math.random() * 90000)}`;
-    // Save order to history before clearing cart
-    saveOrder(orderNumber);
-    // Clear the cart
-    clearCart();
-    // Navigate to thank you page with order number
-    router.push(`/thank-you?order=${orderNumber}`);
+  const handleContinue = async () => {
+    try {
+      setIsLoading(true);
+
+      // 準備訂單項目資料
+      const orderItems = cartItems
+        .filter((item) => item.quantity > 0)
+        .map((item) => ({
+          productId: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        }));
+
+      if (orderItems.length === 0) {
+        alert("購物車是空的");
+        return;
+      }
+
+      // 決定付款方式
+      let paymentMethodType;
+      if (paymentMethod === "apple") {
+        paymentMethodType = "APPLE_PAY";
+      } else {
+        paymentMethodType = selectedCard === "mastercard" ? "MASTERCARD" : "VISA";
+      }
+
+      // 調用 API 創建訂單
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: orderItems,
+          paymentMethod: paymentMethodType,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create order");
+      }
+
+      const data = await response.json();
+      const orderNumber = data.order.orderNumber;
+
+      // Clear the cart
+      clearCart();
+
+      // Navigate to thank you page with order number
+      router.push(`/thank-you?order=${orderNumber}`);
+    } catch (error) {
+      console.error("Error creating order:", error);
+      alert("訂單創建失敗，請稍後再試");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -184,9 +233,10 @@ export default function CheckoutPage() {
       <footer className="border-t border-gray-200 bg-[#fefefe] backdrop-blur-sm px-4 py-8 max-w-md mx-auto w-full">
         <button
           onClick={handleContinue}
-          className="w-full bg-[#ed9c2a] text-white font-bold text-base py-3 px-6 rounded-full hover:bg-[#d88a24] transition-colors"
+          disabled={isLoading}
+          className="w-full bg-[#ed9c2a] text-white font-bold text-base py-3 px-6 rounded-full hover:bg-[#d88a24] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Continue
+          {isLoading ? "處理中..." : "Continue"}
         </button>
       </footer>
     </div>

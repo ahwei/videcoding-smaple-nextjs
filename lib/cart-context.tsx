@@ -1,13 +1,13 @@
 "use client";
 
-import React, { createContext, ReactNode, useContext, useState } from "react";
+import React, { createContext, ReactNode, useContext, useState, useEffect } from "react";
 
 export interface CartItem {
   id: string;
   name: string;
   description: string;
   price: number;
-  calories: number;
+  calories?: number;
   image: string;
   quantity: number;
 }
@@ -20,96 +20,112 @@ export interface Order {
   createdAt: Date;
 }
 
+// 購物車數量的存儲格式
+interface CartQuantities {
+  [productId: string]: number;
+}
+
 interface CartContextType {
   items: CartItem[];
   orders: Order[];
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  updateQuantity: (id: string, quantity: number, itemData?: Partial<CartItem>) => void;
   clearCart: () => void;
   saveOrder: (orderNumber: string) => void;
   reorder: (orderId: string) => void;
+  getQuantity: (id: string) => number;
   totalItems: number;
   totalPrice: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([
-    {
-      id: "1",
-      name: "Soy Milk",
-      description: "Freshly made soy milk, served hot or cold.",
-      price: 2.0,
-      calories: 250,
-      image:
-        "https://images.unsplash.com/photo-1556910110-a5a63dfd393c?w=400&h=400&fit=crop",
-      quantity: 2,
-    },
-    {
-      id: "2",
-      name: "Egg Crepe",
-      description: "Egg crepe with a variety of fillings.",
-      price: 3.5,
-      calories: 350,
-      image:
-        "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=400&h=400&fit=crop",
-      quantity: 1,
-    },
-    {
-      id: "3",
-      name: "Radish Cake",
-      description: "Pan-fried radish cake, crispy outside.",
-      price: 3.0,
-      calories: 320,
-      image:
-        "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400&h=400&fit=crop",
-      quantity: 1,
-    },
-    {
-      id: "4",
-      name: "Fried Dough Stick",
-      description: "Traditional Chinese fried dough.",
-      price: 2.0,
-      calories: 280,
-      image:
-        "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400&h=400&fit=crop",
-      quantity: 1,
-    },
-  ]);
+// localStorage key
+const CART_STORAGE_KEY = "breakfast-cart-quantities";
 
+export function CartProvider({ children }: { children: ReactNode }) {
+  const [cartQuantities, setCartQuantities] = useState<CartQuantities>({});
+  const [cartItemsData, setCartItemsData] = useState<Map<string, CartItem>>(new Map());
   const [orders, setOrders] = useState<Order[]>([]);
 
-  const addItem = (item: CartItem) => {
-    setItems((currentItems) => {
-      const existingItem = currentItems.find((i) => i.id === item.id);
-      if (existingItem) {
-        return currentItems.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i,
-        );
+  // 從 localStorage 讀取購物車數據
+  useEffect(() => {
+    const saved = localStorage.getItem(CART_STORAGE_KEY);
+    if (saved) {
+      try {
+        setCartQuantities(JSON.parse(saved));
+      } catch (error) {
+        console.error("Failed to parse cart data:", error);
       }
-      return [...currentItems, item];
+    }
+  }, []);
+
+  // 保存購物車數據到 localStorage
+  useEffect(() => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartQuantities));
+  }, [cartQuantities]);
+
+  // 獲取購物車項目列表（包含完整數據）
+  const items = Array.from(cartItemsData.values()).filter(
+    (item) => (cartQuantities[item.id] || 0) > 0
+  ).map((item) => ({
+    ...item,
+    quantity: cartQuantities[item.id] || 0,
+  }));
+
+  const addItem = (item: CartItem) => {
+    setCartItemsData((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(item.id, item);
+      return newMap;
     });
+    setCartQuantities((prev) => ({
+      ...prev,
+      [item.id]: (prev[item.id] || 0) + item.quantity,
+    }));
   };
 
   const removeItem = (id: string) => {
-    setItems((currentItems) => currentItems.filter((item) => item.id !== id));
+    setCartQuantities((prev) => {
+      const newQuantities = { ...prev };
+      delete newQuantities[id];
+      return newQuantities;
+    });
   };
 
-  const updateQuantity = (id: string, quantity: number) => {
-    setItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === id ? { ...item, quantity: Math.max(0, quantity) } : item,
-      ),
-    );
+  const updateQuantity = (id: string, quantity: number, itemData?: Partial<CartItem>) => {
+    // 如果提供了 itemData，更新商品資料
+    if (itemData && quantity > 0) {
+      setCartItemsData((prev) => {
+        const newMap = new Map(prev);
+        const existing = newMap.get(id);
+        newMap.set(id, { ...existing, ...itemData, id } as CartItem);
+        return newMap;
+      });
+    }
+    
+    // 更新數量
+    if (quantity <= 0) {
+      setCartQuantities((prev) => {
+        const newQuantities = { ...prev };
+        delete newQuantities[id];
+        return newQuantities;
+      });
+    } else {
+      setCartQuantities((prev) => ({
+        ...prev,
+        [id]: quantity,
+      }));
+    }
+  };
+
+  const getQuantity = (id: string): number => {
+    return cartQuantities[id] || 0;
   };
 
   const clearCart = () => {
-    // Reset all quantities to 0 instead of removing items
-    setItems((currentItems) =>
-      currentItems.map((item) => ({ ...item, quantity: 0 })),
-    );
+    setCartQuantities({});
   };
 
   const saveOrder = (orderNumber: string) => {
@@ -126,8 +142,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const reorder = (orderId: string) => {
     const order = orders.find((o) => o.id === orderId);
     if (order) {
-      // Clear current cart and add all items from the order
-      setItems([...order.items]);
+      const newQuantities: CartQuantities = {};
+      order.items.forEach((item) => {
+        newQuantities[item.id] = item.quantity;
+        setCartItemsData((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(item.id, item);
+          return newMap;
+        });
+      });
+      setCartQuantities(newQuantities);
     }
   };
 
@@ -148,6 +172,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clearCart,
         saveOrder,
         reorder,
+        getQuantity,
         totalItems,
         totalPrice,
       }}
