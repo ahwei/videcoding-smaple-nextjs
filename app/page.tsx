@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { ProductGrid } from "@/components/ProductGrid";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, FileText } from "lucide-react";
 
 async function getProducts() {
   try {
@@ -39,13 +39,11 @@ export default async function Home() {
           <div className="flex items-center gap-4">
             <a 
               href="/orders"
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition text-sm font-medium"
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+              title="訂單歷史"
             >
-              訂單歷史
+              <FileText className="w-6 h-6 text-gray-700" />
             </a>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition">
-              <Heart className="w-6 h-6 text-gray-700" />
-            </button>
             <div id="cart-button-wrapper"></div>
           </div>
         </div>
