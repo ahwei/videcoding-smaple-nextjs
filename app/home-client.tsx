@@ -3,7 +3,7 @@
 import { useCart } from "@/lib/cart-context";
 import { ScrollText, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface Product {
   id: string;
@@ -18,7 +18,9 @@ interface HomeClientProps {
   products: Product[];
 }
 
-export default function HomeClient({ products: initialProducts }: HomeClientProps) {
+export default function HomeClient({
+  products: initialProducts,
+}: HomeClientProps) {
   const router = useRouter();
   const {
     items: cartItems,
@@ -27,7 +29,7 @@ export default function HomeClient({ products: initialProducts }: HomeClientProp
     totalItems,
     totalPrice,
   } = useCart();
-  const [activeCategory, setActiveCategory] = useState("popular");
+  const [activeCategory, setActiveCategory] = useState("all");
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -36,7 +38,9 @@ export default function HomeClient({ products: initialProducts }: HomeClientProp
     const fetchProducts = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/products?category=${activeCategory}`);
+        const response = await fetch(
+          `/api/products?category=${activeCategory}`,
+        );
         if (response.ok) {
           const data = await response.json();
           setProducts(data);
@@ -110,6 +114,17 @@ export default function HomeClient({ products: initialProducts }: HomeClientProp
         {/* Category Navigation */}
         <nav className="flex gap-2 overflow-x-auto pb-2">
           <button
+            onClick={() => setActiveCategory("all")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              activeCategory === "all"
+                ? "bg-[#ed9c2a] text-white"
+                : "bg-[#f8f3ec] text-[#333333]"
+            }`}
+          >
+            <span className="text-base">📋</span>
+            All
+          </button>
+          <button
             onClick={() => setActiveCategory("popular")}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
               activeCategory === "popular"
@@ -168,58 +183,58 @@ export default function HomeClient({ products: initialProducts }: HomeClientProp
           ) : (
             <div className="flex flex-col gap-6">
               {products.map((product) => {
-              const quantity = getItemQuantity(product.id);
-              return (
-                <article
-                  key={product.id}
-                  className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
-                >
-                  <div className="flex gap-4">
-                    <div
-                      className="w-24 h-24 rounded-xl bg-cover bg-center shrink-0"
-                      style={{ backgroundImage: `url('${product.image}')` }}
-                    />
-                    <div className="flex-1 flex flex-col gap-1">
-                      <h3 className="text-lg font-semibold text-[#333333]">
-                        {product.name}
-                      </h3>
-                      <p className="text-sm text-[#666666] leading-5">
-                        {product.description}
-                      </p>
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="text-lg font-bold text-[#333333]">
-                          ${Number(product.price).toFixed(2)}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() =>
-                              handleQuantityChange(
-                                product,
-                                Math.max(0, quantity - 1),
-                              )
-                            }
-                            className="w-8 h-8 rounded-full bg-[#f8f3ec] flex items-center justify-center text-[#333333] font-medium hover:bg-[#efe5d5] transition-colors"
-                          >
-                            -
-                          </button>
-                          <span className="text-base font-medium text-[#333333] min-w-6 text-center">
-                            {quantity}
+                const quantity = getItemQuantity(product.id);
+                return (
+                  <article
+                    key={product.id}
+                    className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+                  >
+                    <div className="flex gap-4">
+                      <div
+                        className="w-24 h-24 rounded-xl bg-cover bg-center shrink-0"
+                        style={{ backgroundImage: `url('${product.image}')` }}
+                      />
+                      <div className="flex-1 flex flex-col gap-1">
+                        <h3 className="text-lg font-semibold text-[#333333]">
+                          {product.name}
+                        </h3>
+                        <p className="text-sm text-[#666666] leading-5">
+                          {product.description}
+                        </p>
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="text-lg font-bold text-[#333333]">
+                            ${Number(product.price).toFixed(2)}
                           </span>
-                          <button
-                            onClick={() =>
-                              handleQuantityChange(product, quantity + 1)
-                            }
-                            className="w-8 h-8 rounded-full bg-[#f8f3ec] flex items-center justify-center text-[#333333] font-medium hover:bg-[#efe5d5] transition-colors"
-                          >
-                            +
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() =>
+                                handleQuantityChange(
+                                  product,
+                                  Math.max(0, quantity - 1),
+                                )
+                              }
+                              className="w-8 h-8 rounded-full bg-[#f8f3ec] flex items-center justify-center text-[#333333] font-medium hover:bg-[#efe5d5] transition-colors"
+                            >
+                              -
+                            </button>
+                            <span className="text-base font-medium text-[#333333] min-w-6 text-center">
+                              {quantity}
+                            </span>
+                            <button
+                              onClick={() =>
+                                handleQuantityChange(product, quantity + 1)
+                              }
+                              className="w-8 h-8 rounded-full bg-[#f8f3ec] flex items-center justify-center text-[#333333] font-medium hover:bg-[#efe5d5] transition-colors"
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              );
-            })}
+                  </article>
+                );
+              })}
             </div>
           )}
 
